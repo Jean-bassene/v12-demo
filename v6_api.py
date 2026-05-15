@@ -120,9 +120,12 @@ def compress():
 
     rec = data.get('record', '100')
     mode = data.get('mode', 'BALANCED')
-    sig_b64 = data.get('signal')
+    sig_raw = data.get('signal')
+    sig_b64 = data.get('signal_b64')
 
-    if sig_b64:
+    if sig_raw is not None and isinstance(sig_raw, list):
+        sig = np.array(sig_raw, dtype=np.float32)
+    elif sig_b64:
         sig = np.frombuffer(base64.b64decode(sig_b64), dtype=np.float32)
     else:
         sig = gen_ecg(rec)
