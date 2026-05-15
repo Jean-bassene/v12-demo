@@ -182,9 +182,11 @@ def index():
     return jsonify({
         "name": "V6 Medical Codec API",
         "version": "3.0",
+        "type": "Codec purement algorithmique — zero ML, zero calibration",
+        "method": "Decomposition gaussienne vectorisee + quantification delta. Seuils physiques, pas de reseau de neurones.",
         "endpoints": {
             "GET  /v6/modes": "Liste des modes disponibles",
-            "POST /v6/compress": "Compresser un signal ECG"
+            "POST /v6/compress": "Compresser un signal ECG. Input: {signal:[...], mode:'BALANCED'} Output: {snr, cr, prd, original, reconstructed}"
         }
     })
 

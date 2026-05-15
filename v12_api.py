@@ -898,6 +898,8 @@ def index():
     return jsonify({
         "name":    "V12 Bearing Fault Detection API",
         "version": "1.3",
+        "type":    "Detection par seuils physiques — zero ML, zero calibration",
+        "method":  "ACF enveloppe + CV inter-pics + energie residuelle. Pas de boite noire, pas de reseau de neurones.",
         "author":  "Jean Bassene — V-Pulse Research",
         "endpoints": {
             "GET  /v12/status":          "Info + statut baseline",
