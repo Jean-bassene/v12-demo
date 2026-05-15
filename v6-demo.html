@@ -73,7 +73,7 @@ h2 { color:#8b949e; font-size:1.1em; font-weight:400; margin-bottom:24px; }
     </div>
     <div class="drop-zone" id="dropZone">
       <div class="icon">📄</div>
-      <p>Ou glissez un fichier .csv (1 colonne, 360 Hz)</p>
+      <p>Ou glissez un fichier .csv, .dat + .hea (MIT-BIH)</p>
     </div>
   </div>
 
@@ -217,6 +217,106 @@ function drawPlot(orig, recon) {
   html += '</svg>';
   svg.innerHTML = html;
 }
+
+// Event listeners
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+  const mode = document.querySelector('.mode-btn.active').dataset.mode;
+  const spinner = document.getElementById('spinner');
+  const results = document.getElementById('results');
+  spinner.style.display = 'block'; results.style.display = 'none';
+  try {
+    const resp = await fetch(API_URL + '/v6/compress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ record: currentRec, mode: mode })
+    });
+    if(!resp.ok) throw new Error('API error: ' + resp.status);
+    const data = await resp.json();
+    document.getElementById('rSnr').textContent = data.snr.toFixed(1) + ' dB';
+    document.getElementById('rPrd').textContent = data.prd.toFixed(3) + '%';
+    document.getElementById('rCr').textContent = data.cr.toFixed(2) + 'x';
+    document.getElementById('rTime').textContent = data.time_ms.toFixed(0) + ' ms';
+    drawPlot(data.original, data.reconstructed);
+    results.style.display = 'block';
+  } catch(e) { alert('Erreur: ' + e.message); }
+  spinner.style.display = 'none';
+});
+
+// Drop zone
+const dz = document.getElementById('dropZone');
+dz.addEventListener('click', () => document.getElementById('fileInput').click());
+dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', async (e) => {
+  e.preventDefault(); dz.classList.remove('dragover');
+  const files = Array.from(e.dataTransfer.files);
+  const datF = files.find(f => f.name.endsWith('.dat'));
+  const heaF = files.find(f => f.name.endsWith('.hea'));
+  const csvF = files.find(f => f.name.endsWith('.csv'));
+  try {
+    let sig;
+    if(datF && heaF) {
+      const datB = new Uint8Array(await datF.arrayBuffer());
+      const heaT = await heaF.text();
+      const dec = decodeMITBIH212(datB, heaT);
+      const stp = Math.max(1, Math.floor(dec.fs / 360));
+      sig = new Float32Array(Math.floor(dec.nSamp / stp));
+      for(let i=0; i<sig.length; i++) sig[i] = dec.signal[i*stp];
+    } else if(csvF) {
+      const txt = await csvF.text();
+      const vals = txt.trim().split(/\\n|,/).map(v=>parseFloat(v.trim())).filter(v=>!isNaN(v));
+      if(vals.length < 100) throw new Error('Signal trop court');
+      sig = new Float32Array(vals);
+    } else { throw new Error('Formats: .csv ou .dat+.hea'); }
+    // Envoyer a l API
+    const mode = document.querySelector('.mode-btn.active').dataset.mode;
+    document.getElementById('spinner').style.display = 'block';
+    const resp = await fetch(API_URL + '/v6/compress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signal: Array.from(sig), mode: mode })
+    });
+    if(!resp.ok) throw new Error('API error');
+    const data = await resp.json();
+    document.getElementById('rSnr').textContent = data.snr.toFixed(1) + ' dB';
+    document.getElementById('rPrd').textContent = data.prd.toFixed(3) + '%';
+    document.getElementById('rCr').textContent = data.cr.toFixed(2) + 'x';
+    document.getElementById('rTime').textContent = data.time_ms.toFixed(0) + ' ms';
+    drawPlot(data.original, data.reconstructed);
+    document.getElementById('results').style.display = 'block';
+  } catch(e) { alert('Erreur: ' + e.message); }
+  document.getElementById('spinner').style.display = 'none';
+});
+
+// File input
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  if(e.target.files[0]) {
+    const dt = new DataTransfer();
+    dt.items.add(e.target.files[0]);
+    dz.dispatchEvent(new DragEvent('drop', { dataTransfer: dt }));
+  }
+});
+
+// Mode buttons
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.mode-desc').forEach(d => d.classList.remove('show'));
+    const desc = document.getElementById('modeDesc' + btn.dataset.mode);
+    if(desc) desc.classList.add('show');
+  });
+});
+
+// Demo buttons
+document.querySelectorAll('.demo-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRec = btn.dataset.rec;
+    document.getElementById('results').style.display = 'none';
+  });
+});
 </script>
 </body>
 </html>
