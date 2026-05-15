@@ -168,8 +168,8 @@ def compress():
         "prd": round(prd_pct(sig, recon), 4),
         "cr": round(cr, 2),
         "time_ms": round(enc_ms, 1),
-        "original": base64.b64encode(sig[::step_disp].tobytes()).decode(),
-        "reconstructed": base64.b64encode(recon[::step_disp].tobytes()).decode(),
+        "original": [round(float(x), 6) for x in sig[::step_disp]],
+        "reconstructed": [round(float(x), 6) for x in recon[::step_disp]],
         "n_samples": len(sig),
         "n_display": len(sig) // step_disp,
     })
