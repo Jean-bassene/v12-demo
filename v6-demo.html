@@ -177,9 +177,13 @@ dz.addEventListener('drop', async e => {
   } catch(e) { showError(e.message); }
 });
 
-fi.addEventListener('change', () => {
-  if(fi.files.length) dz.dispatchEvent(new DragEvent('drop', { dataTransfer: fi.files.length > 1 ?
-    new DataTransfer() : new DataTransfer() }));
+fi.addEventListener('change', async () => {
+  const files = Array.from(fi.files);
+  if(!files.length) return;
+  const dt = new DataTransfer();
+  for(const f of files) dt.items.add(f);
+  dz.dispatchEvent(new DragEvent('drop', { dataTransfer: dt }));
+  fi.value = '';
 });
 
 // ── Boutons ───────────────────────────────────────────────────
